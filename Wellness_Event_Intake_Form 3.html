@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Wellness Event Intake Form</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --teal: #2e7d8a;
+    --teal-light: #e8f4f6;
+    --teal-mid: #a0d4dc;
+    --dark: #1a1a1a;
+    --gray: #555;
+    --lgray: #ccc;
+    --bg: #f0f4f5;
+    --white: #fff;
+    --warn: #fffbea;
+    --warn-border: #f0c040;
+    --warn-text: #7a5f00;
+    --danger: #c0392b;
+    --green: #1e8249;
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { font-size: 16px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--dark); line-height: 1.5; }
+
+  /* ── LIST VIEW ── */
+  #listView { max-width: 700px; margin: 0 auto; padding: 20px 16px 80px; }
+  .list-header { background: var(--white); border-radius: var(--radius); border: 1px solid #dde6e8; padding: 28px 20px 22px; text-align: center; margin-bottom: 16px; }
+  .list-header h1 { font-size: 20px; font-weight: 700; color: var(--teal); line-height: 1.2; }
+  .list-header .prac { font-size: 13px; font-weight: 600; color: var(--teal); margin: 3px 0 2px; }
+  .list-header .sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+  .btn-new { display: inline-block; background: var(--teal); color: var(--white); border: none; border-radius: 10px; padding: 14px 32px; font-size: 16px; font-weight: 600; cursor: pointer; -webkit-appearance: none; }
+  .empty { text-align: center; padding: 40px 20px; color: #aaa; font-size: 14px; }
+  .pt-card { background: var(--white); border-radius: var(--radius-sm); border: 1px solid #dde6e8; padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pt-card-info h3 { font-size: 15px; font-weight: 600; }
+  .pt-card-info p { font-size: 12px; color: #888; margin-top: 2px; }
+  .pt-card-right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .badge-draft { background: #fff8e6; color: #b07800; border: 1px solid #f0d080; }
+  .badge-done { background: var(--teal-light); color: var(--teal); border: 1px solid var(--teal-mid); }
+  .btn-open { background: var(--teal); color: var(--white); border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-del { background: none; border: 1px solid #e0b0b0; border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; color: var(--danger); cursor: pointer; }
+
+  /* ── FORM VIEW ── */
+  #formView { display: none; max-width: 700px; margin: 0 auto; padding: 16px 16px 80px; }
+  .back-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .btn-back { background: var(--white); border: 1px solid #dde6e8; border-radius: var(--radius-sm); padding: 8px 14px; font-size: 14px; color: var(--gray); cursor: pointer; }
+  .form-status { font-size: 13px; color: #888; }
+
+  .fheader { background: var(--white); border-radius: var(--radius); border: 1px solid #dde6e8; padding: 22px 20px 18px; text-align: center; margin-bottom: 14px; }
+  .fheader h1 { font-size: 19px; font-weight: 700; color: var(--teal); }
+  .fheader .prac { font-size: 13px; font-weight: 600; color: var(--teal); margin: 3px 0 2px; }
+  .fheader .sub { font-size: 12px; color: #888; margin-bottom: 10px; }
+  .wellness-badge { display: inline-block; background: var(--teal-light); color: var(--teal); font-size: 11px; padding: 4px 12px; border-radius: 20px; font-style: italic; }
+
+  .card { background: var(--white); border-radius: var(--radius); border: 1px solid #dde6e8; padding: 20px 16px; margin-bottom: 14px; }
+  .sec-title { font-size: 15px; font-weight: 700; color: var(--teal); border-bottom: 2px solid var(--teal); padding-bottom: 6px; margin-bottom: 18px; }
+
+  /* Fields */
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .field-full { margin-bottom: 12px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label { font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.03em; }
+  .field-group input, .field-group textarea {
+    width: 100%; padding: 12px; border: 1.5px solid #dde6e8; border-radius: var(--radius-sm);
+    font-size: 16px; background: #fafdfd; color: var(--dark); outline: none;
+    font-family: inherit; -webkit-appearance: none; appearance: none;
+    transition: border-color 0.15s;
+  }
+  .field-group input:focus, .field-group textarea:focus { border-color: var(--teal); background: var(--white); }
+  .field-group textarea { resize: vertical; min-height: 72px; }
+
+  /* Yes/No */
+  .yn-hint { font-size: 13px; color: var(--gray); margin-bottom: 14px; font-style: italic; }
+  .yn-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f4f5; gap: 0; }
+  .yn-item:last-child { border-bottom: none; }
+  .yn-q { font-size: 14px; color: var(--dark); flex: 1; padding-right: 12px; line-height: 1.4; }
+  .yn-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .yn-btn {
+    width: 52px; height: 38px; border-radius: var(--radius-sm); border: 1.5px solid #dde6e8;
+    background: #fafdfd; font-size: 13px; font-weight: 600; color: var(--gray);
+    cursor: pointer; -webkit-appearance: none; appearance: none; transition: all 0.15s;
+  }
+  .yn-btn.yes.selected { background: #fdecea; border-color: var(--danger); color: var(--danger); }
+  .yn-btn.no.selected { background: #eafaf1; border-color: var(--green); color: var(--green); }
+
+  /* Consent */
+  .consent-text { font-size: 14px; color: var(--gray); line-height: 1.7; }
+  .consent-item { margin-bottom: 14px; }
+  .consent-item strong { color: var(--dark); display: block; font-size: 13px; margin-bottom: 3px; }
+
+  /* Signature */
+  .sig-section { margin-top: 18px; }
+  .sig-label { font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; display: block; }
+  .sig-wrap { border: 1.5px solid #dde6e8; border-radius: var(--radius-sm); background: #fafdfd; overflow: hidden; position: relative; }
+  .sig-wrap canvas { display: block; width: 100%; height: 120px; cursor: crosshair; touch-action: none; }
+  .sig-placeholder { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 13px; color: #bbb; pointer-events: none; font-style: italic; white-space: nowrap; }
+  .sig-clear { margin-top: 6px; background: none; border: 1px solid #dde6e8; border-radius: 6px; padding: 6px 14px; font-size: 13px; color: var(--gray); cursor: pointer; }
+  .sig-minor { font-size: 11px; color: #aaa; margin-top: 6px; }
+  .sig-date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; align-items: start; }
+
+  /* Checkboxes */
+  .chk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .chk-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid #dde6e8; border-radius: var(--radius-sm); background: #fafdfd; cursor: pointer; transition: border-color 0.15s; }
+  .chk-item.selected { border-color: var(--teal); background: var(--teal-light); }
+  .chk-item input { display: none; }
+  .chk-box { width: 20px; height: 20px; border: 1.5px solid #ccc; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; background: var(--white); }
+  .chk-item.selected .chk-box { background: var(--teal); border-color: var(--teal); color: var(--white); }
+  .chk-label { font-size: 13px; color: var(--dark); line-height: 1.3; }
+
+  /* Radio pills */
+  .radio-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .radio-pill { padding: 9px 16px; border: 1.5px solid #dde6e8; border-radius: 20px; font-size: 14px; color: var(--gray); cursor: pointer; background: #fafdfd; transition: all 0.15s; -webkit-appearance: none; white-space: nowrap; }
+  .radio-pill.selected { background: var(--teal); border-color: var(--teal); color: var(--white); font-weight: 600; }
+  .radio-pill input { display: none; }
+
+  /* Notices */
+  .notice-blue { background: #f0f7f9; border-left: 3px solid var(--teal); padding: 10px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 13px; color: #2a5a64; margin-bottom: 16px; }
+  .notice-yellow { background: var(--warn); border-left: 3px solid var(--warn-border); padding: 10px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 13px; color: var(--warn-text); margin-bottom: 16px; display: none; }
+  .divider { border: none; border-top: 1px solid #eef2f3; margin: 18px 0; }
+  .subsec-label { font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; display: block; }
+
+  /* Action bar */
+  .action-bar { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  .btn-save { background: var(--white); color: var(--teal); border: 2px solid var(--teal); border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; max-width: 200px; }
+  .btn-pdf { background: var(--teal); color: var(--white); border: none; border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 600; cursor: pointer; flex: 1; max-width: 200px; }
+
+  /* Toast */
+  .toast { display: none; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a4a52; color: var(--white); padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 9999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+
+  @media (max-width: 480px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .chk-grid { grid-template-columns: 1fr; }
+    .sig-date-row { grid-template-columns: 1fr; }
+    .pt-card-right { margin-left: 0; width: 100%; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ PATIENT LIST ══ -->
+<div id="listView">
+  <div class="list-header">
+    <h1>Wellness Event Intake Form</h1>
+    <div class="prac">Dr. Sarah Wilson, DAHM, L.Ac.</div>
+    <div class="sub">Auricular Acupuncture &amp; Ear Seeds</div>
+    <button class="btn-new" onclick="newPatient()">+ New Patient</button>
+  </div>
+  <div id="patientList"></div>
+</div>
+
+<!-- ══ FORM ══ -->
+<div id="formView">
+  <div class="back-row">
+    <button class="btn-back" onclick="goToList()">← Patient List</button>
+    <span class="form-status" id="formStatus"></span>
+  </div>
+
+  <div class="fheader">
+    <h1>Wellness Event Intake Form</h1>
+    <div class="prac">Dr. Sarah Wilson, DAHM, L.Ac.</div>
+    <div class="sub">Auricular Acupuncture &amp; Ear Seeds</div>
+    <span class="wellness-badge">Wellness service — not a medical diagnosis or treatment</span>
+  </div>
+
+  <!-- Patient Info -->
+  <div class="card">
+    <div class="sec-title">Patient Information</div>
+    <div class="field-grid">
+      <div class="field-group"><label>Full Name *</label><input type="text" id="ptName" placeholder="First Last" autocomplete="off"></div>
+      <div class="field-group"><label>Date of Birth</label><input type="date" id="ptDob"></div>
+    </div>
+    <div class="field-grid">
+      <div class="field-group"><label>Phone</label><input type="tel" id="ptPhone" placeholder="(555) 000-0000"></div>
+      <div class="field-group"><label>Email</label><input type="email" id="ptEmail" placeholder="you@email.com"></div>
+    </div>
+    <div class="field-full field-group"><label>Event / Location</label><input type="text" id="ptEvent" placeholder="Event name or location" autocomplete="off"></div>
+    <div class="field-full field-group"><label>Today's Date *</label><input type="date" id="ptDate"></div>
+  </div>
+
+  <!-- Health Screening -->
+  <div class="card">
+    <div class="sec-title">Health Screening</div>
+    <p class="yn-hint">Tap YES or NO for each question. If YES, explain below.</p>
+    <div id="ynList"></div>
+    <div class="field-full field-group" style="margin-top:14px;">
+      <label>If YES to any above, please explain</label>
+      <textarea id="screenExplain" placeholder="Please describe..."></textarea>
+    </div>
+  </div>
+
+  <!-- Informed Consent -->
+  <div class="card">
+    <div class="sec-title">Informed Consent</div>
+    <div class="consent-text">
+      <div class="consent-item"><strong>Nature of service</strong>Auricular acupuncture and ear seeds are complementary wellness services involving placement of small needles or adhesive seeds on specific points of the outer ear. This is a wellness service and does not constitute a medical diagnosis, treatment, or clinical therapeutic relationship.</div>
+      <div class="consent-item"><strong>Risks &amp; side effects</strong>Possible side effects include temporary soreness, bruising, bleeding, or skin irritation; lightheadedness or fainting; infection (rare, minimized with sterile technique); and allergic reaction to adhesive or metal materials.</div>
+      <div class="consent-item"><strong>Ear seeds</strong>If applied, ear seeds may remain 3–5 days. Remove if excessive discomfort, redness, or swelling occurs. Avoid prolonged submersion. Seeds may fall off and should be discarded safely.</div>
+      <div class="consent-item"><strong>Voluntary participation</strong>Participation is entirely voluntary. I may withdraw consent or ask the practitioner to stop at any time, without penalty.</div>
+      <div class="consent-item"><strong>Not a substitute for medical care</strong>This service does not replace professional medical advice, diagnosis, or treatment.</div>
+      <div class="consent-item"><strong>Accuracy of information</strong>I confirm all information I have provided is accurate and complete to the best of my knowledge.</div>
+    </div>
+
+    <hr class="divider">
+    <span class="subsec-label">Patient / Guardian Signature *</span>
+    <div class="sig-wrap" id="ptSigWrap">
+      <canvas id="ptSigCanvas"></canvas>
+      <span class="sig-placeholder" id="ptSigPlaceholder">Sign here with your finger</span>
+    </div>
+    <button class="sig-clear" onclick="clearSig('pt')">Clear signature</button>
+    <p class="sig-minor">If patient is under 18, a parent or legal guardian must sign.</p>
+    <div class="sig-date-row">
+      <div class="field-group"><label>Signature Date</label><input type="date" id="ptSigDate"></div>
+    </div>
+  </div>
+
+  <!-- Practitioner -->
+  <div class="card">
+    <div class="sec-title">For Practitioner Use Only</div>
+    <div class="notice-blue" id="noteBlue">Complete after the session. Hit <strong>Save Draft</strong> first so the patient can move on.</div>
+    <div class="notice-yellow" id="noteYellow">Patient info saved. Fill in your clinical notes, then download the PDF.</div>
+
+    <div class="field-grid">
+      <div class="field-group"><label>Practitioner Name</label><input type="text" id="pracName" value="Dr. Sarah Wilson"></div>
+      <div class="field-group"><label>License #</label><input type="text" id="pracLicense" placeholder="License number"></div>
+    </div>
+
+    <span class="subsec-label">Protocol / Points Applied</span>
+    <div class="chk-grid" id="pointsGrid"></div>
+
+    <div class="field-full field-group" style="margin-bottom:14px;">
+      <label>Additional / Custom Points</label>
+      <input type="text" id="customPoints" placeholder="e.g. Allergy Point, Thalamus...">
+    </div>
+
+    <span class="subsec-label">Laterality</span>
+    <div class="radio-group" id="lateralityGroup">
+      <label class="radio-pill" onclick="selectPill('laterality',this,'Bilateral')"><input type="radio" name="laterality" value="Bilateral">Bilateral</label>
+      <label class="radio-pill" onclick="selectPill('laterality',this,'Left Only')"><input type="radio" name="laterality" value="Left Only">Left Only</label>
+      <label class="radio-pill" onclick="selectPill('laterality',this,'Right Only')"><input type="radio" name="laterality" value="Right Only">Right Only</label>
+    </div>
+
+    <span class="subsec-label">Modality</span>
+    <div class="radio-group" id="modalityGroup">
+      <label class="radio-pill" onclick="selectPill('modality',this,'Acupuncture Needles')"><input type="radio" name="modality" value="Acupuncture Needles">Acupuncture Needles</label>
+      <label class="radio-pill" onclick="selectPill('modality',this,'Ear Seeds')"><input type="radio" name="modality" value="Ear Seeds">Ear Seeds</label>
+      <label class="radio-pill" onclick="selectPill('modality',this,'Both')"><input type="radio" name="modality" value="Both">Both</label>
+    </div>
+
+    <div class="field-full field-group" style="margin-bottom:14px;">
+      <label>Observations / Notes</label>
+      <textarea id="pracNotes" placeholder="Any relevant observations or follow-up notes..."></textarea>
+    </div>
+
+    <span class="subsec-label">Adverse Reactions</span>
+    <div class="radio-group" id="adverseGroup">
+      <label class="radio-pill" onclick="selectPill('adverse',this,'None')"><input type="radio" name="adverse" value="None">None</label>
+      <label class="radio-pill" onclick="selectPill('adverse',this,'See notes')"><input type="radio" name="adverse" value="See notes">See Notes Above</label>
+    </div>
+
+    <hr class="divider">
+    <span class="subsec-label">Practitioner Signature</span>
+    <div class="sig-wrap" id="pracSigWrap">
+      <canvas id="pracSigCanvas"></canvas>
+      <span class="sig-placeholder" id="pracSigPlaceholder">Sign here with your finger</span>
+    </div>
+    <button class="sig-clear" onclick="clearSig('prac')">Clear signature</button>
+    <div class="sig-date-row">
+      <div class="field-group"><label>Signature Date</label><input type="date" id="pracSigDate"></div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-save" onclick="saveDraft()">💾 Save Draft</button>
+    <button class="btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──
+const QUESTIONS = [
+  "Do you have a pacemaker or other implanted electrical device?",
+  "Are you pregnant or think you might be pregnant?",
+  "Do you have any metal allergies (nickel, stainless steel, gold, silver)?",
+  "Do you have any active infection, open wound, or skin condition on or around your ears?",
+  "Do you have a history of keloid scarring?",
+  "Are you currently taking blood thinners or anticoagulant medications?",
+  "Do you have a bleeding disorder or clotting condition?",
+  "Do you have a latex allergy?",
+  "Do you have ear piercings, implants, or prior surgeries on your ears?",
+  "Are you currently under the care of a physician for a serious medical condition?"
+];
+const POINTS = [
+  "NADA Protocol (5-point)","Shen Men","Point Zero","Sympathetic",
+  "Kidney","Liver","Spleen","Lung","Heart",
+  "Adrenal / Subcortex","Endocrine","Relaxation / Tranquilizer",
+  "Appetite Control","Ear Seeds Applied"
+];
+const today = new Date().toISOString().split('T')[0];
+let currentId = null;
+const sigData = { pt: null, prac: null }; // store as base64
+
+// ── Build Y/N buttons ──
+const ynList = document.getElementById('ynList');
+QUESTIONS.forEach((q, i) => {
+  const div = document.createElement('div');
+  div.className = 'yn-item';
+  div.innerHTML = `<span class="yn-q">${q}</span>
+    <div class="yn-btns">
+      <button class="yn-btn yes" data-q="${i}" data-v="Yes" onclick="selectYN(${i},'Yes',this)">YES</button>
+      <button class="yn-btn no"  data-q="${i}" data-v="No"  onclick="selectYN(${i},'No',this)">NO</button>
+    </div>`;
+  ynList.appendChild(div);
+});
+
+// ── Build points grid ──
+const pg = document.getElementById('pointsGrid');
+POINTS.forEach((p, i) => {
+  const label = document.createElement('label');
+  label.className = 'chk-item';
+  label.innerHTML = `<input type="checkbox" id="chk${i}" value="${p}"><span class="chk-box"></span><span class="chk-label">${p}</span>`;
+  label.addEventListener('click', () => {
+    const cb = label.querySelector('input');
+    setTimeout(() => {
+      label.classList.toggle('selected', cb.checked);
+      label.querySelector('.chk-box').textContent = cb.checked ? '✓' : '';
+    }, 10);
+  });
+  pg.appendChild(label);
+});
+
+// ── Y/N selection ──
+const ynState = {};
+function selectYN(i, val, btn) {
+  ynState[i] = val;
+  const item = btn.closest('.yn-item');
+  item.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ── Radio pills ──
+const pillState = {};
+function selectPill(group, label, val) {
+  pillState[group] = val;
+  document.querySelectorAll(`#${group}Group .radio-pill`).forEach(l => l.classList.remove('selected'));
+  label.classList.add('selected');
+}
+
+// ── Signature pads ──
+function setupSigPad(prefix) {
+  const canvas = document.getElementById(prefix + 'SigCanvas');
+  const wrap = document.getElementById(prefix + 'SigWrap');
+  const placeholder = document.getElementById(prefix + 'SigPlaceholder');
+  const ctx = canvas.getContext('2d');
+  let drawing = false;
+  let hasSig = false;
+
+  function setSize() {
+    const w = wrap.clientWidth;
+    const h = 120;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (sigData[prefix]) {
+      const img = new Image();
+      img.onload = () => ctx.drawImage(img, 0, 0, w, h);
+      img.src = sigData[prefix];
+      placeholder.style.display = 'none';
+    }
+  }
+
+  setTimeout(setSize, 50);
+  window.addEventListener('resize', setSize);
+
+  function getXY(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    const {x,y} = getXY(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const {x,y} = getXY(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    hasSig = true;
+    placeholder.style.display = 'none';
+    sigData[prefix] = canvas.toDataURL('image/png');
+  }
+  function endDraw(e) {
+    if (drawing) { e.preventDefault(); drawing = false; }
+  }
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
+  canvas.addEventListener('touchend', endDraw, { passive: false });
+  canvas.addEventListener('touchcancel', endDraw, { passive: false });
+}
+
+function clearSig(prefix) {
+  const canvas = document.getElementById(prefix + 'SigCanvas');
+  const wrap = document.getElementById(prefix + 'SigWrap');
+  const placeholder = document.getElementById(prefix + 'SigPlaceholder');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+  sigData[prefix] = null;
+  placeholder.style.display = '';
+}
+
+setupSigPad('pt');
+setupSigPad('prac');
+
+// ── Helpers ──
+function v(id) { return (document.getElementById(id)||{}).value || ''; }
+function sv(id, val) { const el = document.getElementById(id); if (el) el.value = val || ''; }
+
+function collectForm() {
+  const yn = {};
+  QUESTIONS.forEach((_, i) => yn[i] = ynState[i] || '');
+  const pts = Array.from(document.querySelectorAll('#pointsGrid input:checked')).map(e => e.value);
+  return {
+    ptName: v('ptName'), ptDob: v('ptDob'), ptPhone: v('ptPhone'), ptEmail: v('ptEmail'),
+    ptEvent: v('ptEvent'), ptDate: v('ptDate'),
+    yn, screenExplain: v('screenExplain'),
+    ptSigDate: v('ptSigDate'), ptSig: sigData.pt || '',
+    pracName: v('pracName'), pracLicense: v('pracLicense'),
+    points: pts, customPoints: v('customPoints'),
+    laterality: pillState.laterality || '',
+    modality: pillState.modality || '',
+    pracNotes: v('pracNotes'),
+    adverse: pillState.adverse || '',
+    pracSigDate: v('pracSigDate'), pracSig: sigData.prac || '',
+    savedAt: Date.now()
+  };
+}
+
+function populateForm(data) {
+  sv('ptName', data.ptName); sv('ptDob', data.ptDob); sv('ptPhone', data.ptPhone);
+  sv('ptEmail', data.ptEmail); sv('ptEvent', data.ptEvent); sv('ptDate', data.ptDate);
+  sv('screenExplain', data.screenExplain); sv('ptSigDate', data.ptSigDate);
+  sv('pracName', data.pracName || 'Dr. Sarah Wilson');
+  sv('pracLicense', data.pracLicense); sv('customPoints', data.customPoints);
+  sv('pracNotes', data.pracNotes); sv('pracSigDate', data.pracSigDate);
+
+  // Y/N
+  Object.keys(ynState).forEach(k => delete ynState[k]);
+  document.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected'));
+  if (data.yn) {
+    QUESTIONS.forEach((_, i) => {
+      const val = data.yn[i];
+      if (val) {
+        ynState[i] = val;
+        const btn = document.querySelector(`.yn-btn[data-q="${i}"][data-v="${val}"]`);
+        if (btn) btn.classList.add('selected');
+      }
+    });
+  }
+
+  // Checkboxes
+  document.querySelectorAll('#pointsGrid .chk-item').forEach(label => {
+    const cb = label.querySelector('input');
+    const checked = data.points && data.points.includes(cb.value);
+    cb.checked = checked;
+    label.classList.toggle('selected', checked);
+    label.querySelector('.chk-box').textContent = checked ? '✓' : '';
+  });
+
+  // Pills
+  ['laterality','modality','adverse'].forEach(g => {
+    delete pillState[g];
+    document.querySelectorAll(`#${g}Group .radio-pill`).forEach(l => l.classList.remove('selected'));
+  });
+  if (data.laterality) { pillState.laterality = data.laterality; document.querySelector(`#lateralityGroup .radio-pill input[value="${data.laterality}"]`)?.closest('.radio-pill')?.classList.add('selected'); }
+  if (data.modality)   { pillState.modality   = data.modality;   document.querySelector(`#modalityGroup .radio-pill input[value="${data.modality}"]`)?.closest('.radio-pill')?.classList.add('selected'); }
+  if (data.adverse)    { pillState.adverse    = data.adverse;    document.querySelector(`#adverseGroup .radio-pill input[value="${data.adverse}"]`)?.closest('.radio-pill')?.classList.add('selected'); }
+
+  // Signatures
+  sigData.pt = data.ptSig || null;
+  sigData.prac = data.pracSig || null;
+  // Redraw sigs after short delay so canvas is sized
+  setTimeout(() => {
+    ['pt','prac'].forEach(prefix => {
+      const canvas = document.getElementById(prefix + 'SigCanvas');
+      const wrap = document.getElementById(prefix + 'SigWrap');
+      const placeholder = document.getElementById(prefix + 'SigPlaceholder');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+      placeholder.style.display = '';
+      if (sigData[prefix]) {
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, 0, 0, canvas.clientWidth, canvas.clientHeight); placeholder.style.display = 'none'; };
+        img.src = sigData[prefix];
+      }
+    });
+  }, 150);
+}
+
+function clearForm() {
+  ['ptName','ptDob','ptPhone','ptEmail','ptEvent','screenExplain','ptSigDate',
+   'pracLicense','customPoints','pracNotes','pracSigDate'].forEach(id => sv(id,''));
+  sv('ptDate', today); sv('ptSigDate', today); sv('pracSigDate', today);
+  sv('pracName', 'Dr. Sarah Wilson');
+  Object.keys(ynState).forEach(k => delete ynState[k]);
+  document.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#pointsGrid .chk-item').forEach(label => {
+    label.querySelector('input').checked = false;
+    label.classList.remove('selected');
+    label.querySelector('.chk-box').textContent = '';
+  });
+  ['laterality','modality','adverse'].forEach(g => {
+    delete pillState[g];
+    document.querySelectorAll(`#${g}Group .radio-pill`).forEach(l => l.classList.remove('selected'));
+  });
+  sigData.pt = null; sigData.prac = null;
+  ['pt','prac'].forEach(prefix => {
+    const canvas = document.getElementById(prefix + 'SigCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.clearRect(0, 0, canvas.width/dpr, canvas.height/dpr);
+    document.getElementById(prefix + 'SigPlaceholder').style.display = '';
+  });
+}
+
+// ── Storage ──
+function getPatients() { try { return JSON.parse(localStorage.getItem('wellnessPatients')||'{}'); } catch { return {}; } }
+function savePatients(obj) { localStorage.setItem('wellnessPatients', JSON.stringify(obj)); }
+
+// ── List ──
+function renderList() {
+  const patients = getPatients();
+  const keys = Object.keys(patients).sort((a,b) => (patients[b].savedAt||0)-(patients[a].savedAt||0));
+  const el = document.getElementById('patientList');
+  if (!keys.length) { el.innerHTML = '<div class="empty">No patients yet. Tap "+ New Patient" to begin.</div>'; return; }
+  el.innerHTML = keys.map(id => {
+    const p = patients[id];
+    const badge = p.complete ? '<span class="badge badge-done">✓ PDF Downloaded</span>' : '<span class="badge badge-draft">Draft</span>';
+    const time = p.savedAt ? new Date(p.savedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="pt-card">
+      <div class="pt-card-info"><h3>${p.ptName||'Unnamed'}</h3><p>${p.ptDate||''} ${time?'· Saved '+time:''}</p></div>
+      <div class="pt-card-right">${badge}<button class="btn-open" onclick="openPatient('${id}')">Open</button><button class="btn-del" onclick="deletePatient('${id}')">Delete</button></div>
+    </div>`;
+  }).join('');
+}
+
+function deletePatient(id) {
+  if (!confirm('Delete this patient? This cannot be undone.')) return;
+  const p = getPatients(); delete p[id]; savePatients(p); renderList();
+}
+
+// ── Navigation ──
+function showView(view) {
+  document.getElementById('listView').style.display = view==='list' ? 'block' : 'none';
+  document.getElementById('formView').style.display = view==='form' ? 'block' : 'none';
+  window.scrollTo(0, 0);
+}
+
+function newPatient() {
+  currentId = 'pt_' + Date.now();
+  clearForm();
+  document.getElementById('formStatus').textContent = 'New patient';
+  document.getElementById('noteBlue').style.display = 'block';
+  document.getElementById('noteYellow').style.display = 'none';
+  showView('form');
+}
+
+function openPatient(id) {
+  currentId = id;
+  const data = getPatients()[id];
+  if (!data) return;
+  clearForm();
+  populateForm(data);
+  document.getElementById('formStatus').textContent = data.ptName || 'Patient';
+  const hasPtSig = !!data.ptSig;
+  document.getElementById('noteBlue').style.display = hasPtSig ? 'none' : 'block';
+  document.getElementById('noteYellow').style.display = hasPtSig ? 'block' : 'none';
+  showView('form');
+}
+
+function goToList() { showView('list'); renderList(); }
+
+// ── Save Draft ──
+function saveDraft() {
+  const name = v('ptName');
+  if (!name) { showToast('Please enter the patient name first.'); return; }
+  const data = collectForm();
+  const patients = getPatients();
+  patients[currentId] = { ...data, complete: patients[currentId]?.complete || false };
+  savePatients(patients);
+  const hasPtSig = !!data.ptSig;
+  document.getElementById('noteBlue').style.display = hasPtSig ? 'none' : 'block';
+  document.getElementById('noteYellow').style.display = hasPtSig ? 'block' : 'none';
+  document.getElementById('formStatus').textContent = name;
+  showToast('Draft saved — ' + name);
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 2800);
+}
+
+// ── PDF ──
+function downloadPDF() {
+  const name = v('ptName');
+  if (!name) { showToast('Please enter patient name first.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'pt', format:'letter' });
+  const W = doc.internal.pageSize.getWidth();
+  const PH = doc.internal.pageSize.getHeight();
+  const M = 50, COL = W - M*2;
+  let y = 50;
+  const TEAL=[46,125,138], DARK=[26,26,26], GRAY=[90,90,90], LGRAY=[200,200,200], WHITE=[255,255,255];
+
+  function newPage() { doc.addPage(); y = 50; }
+  function check(need) { if (y + need > PH - 50) newPage(); }
+
+  function header(sub) {
+    doc.setFont('helvetica','bold'); doc.setFontSize(17); doc.setTextColor(...TEAL);
+    doc.text('Wellness Event Intake Form', W/2, y, {align:'center'}); y+=15;
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...TEAL);
+    doc.text('Dr. Sarah Wilson, DAHM, L.Ac.', W/2, y, {align:'center'}); y+=13;
+    doc.setFontSize(10); doc.setTextColor(...GRAY);
+    doc.text(sub, W/2, y, {align:'center'}); y+=12;
+    doc.setDrawColor(...TEAL); doc.setLineWidth(1.5);
+    doc.line(M, y, W-M, y); y+=18;
+  }
+
+  function secTitle(text) {
+    check(34);
+    doc.setFillColor(...TEAL); doc.rect(M, y, COL, 22, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...WHITE);
+    doc.text(text, M+8, y+15); y+=30;
+    doc.setTextColor(...DARK);
+  }
+
+  function fieldRow(items) {
+    // items: [{label, value}]
+    const w = COL / items.length;
+    items.forEach((item, idx) => {
+      const x = M + idx * w;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+      doc.text((item.label||'').toUpperCase(), x, y);
+      doc.setDrawColor(...LGRAY); doc.line(x, y+2, x+w-8, y+2);
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...DARK);
+      if (item.value) doc.text(String(item.value), x, y+13);
+    });
+    y += 26;
+  }
+
+  function sigBlock(prefix, label, dateVal, note) {
+    check(100);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...GRAY);
+    doc.text(label.toUpperCase(), M, y); y+=8;
+    const sData = sigData[prefix];
+    if (sData) {
+      try { doc.addImage(sData, 'PNG', M, y, 180, 50); } catch(e) {}
+    } else {
+      doc.setFillColor(250,253,253); doc.rect(M, y, 180, 50, 'F');
+      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(180,180,180);
+      doc.text('No signature', M+6, y+28);
+    }
+    doc.setDrawColor(...LGRAY); doc.line(M, y+54, M+180, y+54);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text(label, M, y+63);
+    // Date
+    const dx = M + COL/2 + 10;
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('DATE', dx, y);
+    doc.setDrawColor(...LGRAY); doc.line(dx, y+2, W-M, y+2);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(...DARK);
+    if (dateVal) doc.text(dateVal, dx, y+13);
+    y += 72;
+    if (note) { doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(...GRAY); doc.text(note, M, y); y+=14; }
+  }
+
+  // ── PAGE 1: Patient info + screening + consent + patient sig ──
+  header('Auricular Acupuncture & Ear Seeds');
+
+  secTitle('Patient Information');
+  check(30); fieldRow([{label:'Full Name', value:v('ptName')},{label:'Date of Birth', value:v('ptDob')}]);
+  check(30); fieldRow([{label:'Phone', value:v('ptPhone')},{label:'Email', value:v('ptEmail')}]);
+  check(30); fieldRow([{label:'Event / Location', value:v('ptEvent')},{label:'Date', value:v('ptDate')}]);
+  y+=4;
+
+  secTitle('Health Screening');
+  QUESTIONS.forEach((q,i) => {
+    check(20);
+    const ans = ynState[i] || '—';
+    const ansColor = ans==='Yes'?[180,30,30]:ans==='No'?[30,130,80]:GRAY;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...DARK);
+    const lines = doc.splitTextToSize(q, COL-70);
+    doc.text(lines, M, y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...ansColor);
+    doc.text(ans, W-M, y, {align:'right'});
+    y += lines.length * 13 + 3;
+    doc.setDrawColor(235,240,241); doc.line(M, y-1, W-M, y-1);
+  });
+  const expl = v('screenExplain');
+  if (expl) {
+    y+=6; check(30);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...GRAY); doc.text('EXPLANATION:', M, y); y+=12;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...DARK);
+    const ln = doc.splitTextToSize(expl, COL); doc.text(ln, M, y); y += ln.length*13+6;
+  }
+  y+=6;
+
+  secTitle('Informed Consent');
+  const consentItems = [
+    ['Nature of service','Auricular acupuncture and ear seeds are complementary wellness services. This is not a medical diagnosis, treatment, or clinical therapeutic relationship.'],
+    ['Risks & side effects','Possible side effects: soreness, bruising, bleeding, skin irritation, lightheadedness, infection (rare), or allergic reaction to materials.'],
+    ['Ear seeds','If applied, ear seeds may remain 3–5 days. Remove if excessive discomfort, redness, or swelling occurs.'],
+    ['Voluntary participation','Patient may withdraw consent or ask practitioner to stop at any time, without penalty.'],
+    ['Not a substitute for medical care','This service does not replace professional medical advice, diagnosis, or treatment.'],
+    ['Accuracy of information','Patient confirms all information provided is accurate and complete.']
+  ];
+  consentItems.forEach(([t,tx]) => {
+    check(30);
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(...DARK); doc.text(t, M, y); y+=12;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...GRAY);
+    const ln=doc.splitTextToSize(tx,COL); doc.text(ln,M,y); y+=ln.length*13+5;
+  });
+  y+=8;
+  sigBlock('pt','Patient / Guardian Signature', v('ptSigDate'), 'If patient is under 18, a parent or legal guardian must sign.');
+
+  // ── PAGE 2: Practitioner ──
+  newPage();
+  header('Practitioner Record — ' + (v('ptName')||''));
+
+  secTitle('Practitioner Information');
+  check(30); fieldRow([{label:'Practitioner Name', value:v('pracName')},{label:'License #', value:v('pracLicense')}]);
+  y+=4;
+
+  secTitle('Treatment Record');
+  const checked = Array.from(document.querySelectorAll('#pointsGrid input:checked')).map(e=>e.value);
+  const cust = v('customPoints'); if (cust) checked.push(cust + ' (custom)');
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...GRAY); doc.text('POINTS / PROTOCOL APPLIED:', M, y); y+=12;
+  if (checked.length) {
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...DARK);
+    const half=Math.ceil(checked.length/2), c1=checked.slice(0,half), c2=checked.slice(half);
+    for (let r=0;r<Math.max(c1.length,c2.length);r++) {
+      check(14);
+      if(c1[r]) doc.text('✓  '+c1[r], M, y);
+      if(c2[r]) doc.text('✓  '+c2[r], M+COL/2+8, y);
+      y+=14;
+    }
+  } else {
+    doc.setFont('helvetica','italic'); doc.setFontSize(10); doc.setTextColor(...GRAY); doc.text('None selected',M,y); y+=14;
+  }
+  y+=8;
+  check(30); fieldRow([{label:'Laterality', value:pillState.laterality||'—'},{label:'Modality', value:pillState.modality||'—'}]);
+  check(30); fieldRow([{label:'Adverse Reactions', value:pillState.adverse||'—'},{label:'',value:''}]);
+
+  const notes = v('pracNotes');
+  if (notes) {
+    y+=4; check(30);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...GRAY); doc.text('OBSERVATIONS / NOTES:', M, y); y+=12;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...DARK);
+    const ln=doc.splitTextToSize(notes,COL); doc.text(ln,M,y); y+=ln.length*13+8;
+  }
+  y+=8;
+  sigBlock('prac','Practitioner Signature', v('pracSigDate'), null);
+
+  // Footers
+  const total = doc.internal.getNumberOfPages();
+  for (let p=1;p<=total;p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica','italic'); doc.setFontSize(8); doc.setTextColor(...LGRAY);
+    doc.text('Retain this form following the event.', W/2, PH-20, {align:'center'});
+    doc.text(`Page ${p} of ${total}`, W-M, PH-20, {align:'right'});
+  }
+
+  const safe = name.replace(/[^a-z0-9]/gi,'_');
+  doc.save(`WellnessIntake_${safe}_${today}.pdf`);
+
+  const patients = getPatients();
+  if (patients[currentId]) { patients[currentId].complete = true; savePatients(patients); }
+  showToast('PDF downloaded — ' + name);
+}
+
+// ── Init ──
+renderList();
+showView('list');
+</script>
+</body>
+</html>
